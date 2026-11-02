@@ -1,11 +1,14 @@
 package ru.matveylegenda.tiauth.cache;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.experimental.UtilityClass;
 
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @UtilityClass
 public class AuthCache {
@@ -13,7 +16,10 @@ public class AuthCache {
     private final Set<String> pendingVerifications = ConcurrentHashMap.newKeySet();
     private final Set<String> totpPending = ConcurrentHashMap.newKeySet();
     private final Map<String, Integer> loginAttempts = new ConcurrentHashMap<>();
-    private final Map<String, Integer> totpAttempts = new ConcurrentHashMap<>();
+    private final Cache<String, Integer> totpAttempts = Caffeine.newBuilder()
+            .maximumSize(100_000)
+            .expireAfterWrite(30, TimeUnit.MINUTES)
+            .build();
     private final Map<String, String> totpEnableSecrets = new ConcurrentHashMap<>();
 
     public void setAuthenticated(String name) {
@@ -52,6 +58,12 @@ public class AuthCache {
         totpPending.remove(playerName.toLowerCase(Locale.ROOT));
     }
 
+    /** Clears per-connection TOTP state without resetting the failed-attempt budget. */
+    public void clearTotpFlowState(String playerName) {
+        clearTotpPending(playerName);
+        clearPendingVerification(playerName);
+    }
+
     public int incrementLoginAttempts(String lowerName) {
         return loginAttempts.merge(lowerName, 1, Integer::sum);
     }
@@ -61,11 +73,11 @@ public class AuthCache {
     }
 
     public int incrementTotpAttempts(String lowerName) {
-        return totpAttempts.merge(lowerName, 1, Integer::sum);
+        return totpAttempts.asMap().merge(lowerName, 1, Integer::sum);
     }
 
     public void resetTotpAttempts(String lowerName) {
-        totpAttempts.remove(lowerName);
+        totpAttempts.invalidate(lowerName);
     }
 
     public void setTotpEnableSecret(String playerName, String secret) {
@@ -85,7 +97,7 @@ public class AuthCache {
         pendingVerifications.clear();
         totpPending.clear();
         loginAttempts.clear();
-        totpAttempts.clear();
+        totpAttempts.invalidateAll();
         totpEnableSecrets.clear();
     }
 }
