@@ -58,7 +58,7 @@ public class AuthCache {
         totpPending.remove(playerName.toLowerCase(Locale.ROOT));
     }
 
-    /** Clears per-connection TOTP state without resetting the failed-attempt budget. */
+    /** Сбрасывает состояние TOTP для соединения, сохраняя счётчик неудачных попыток. */
     public void clearTotpFlowState(String playerName) {
         clearTotpPending(playerName);
         clearPendingVerification(playerName);
