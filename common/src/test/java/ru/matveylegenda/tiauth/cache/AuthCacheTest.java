@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AuthCacheTest {
     @AfterEach
@@ -19,7 +18,7 @@ class AuthCacheTest {
         AuthCache.setPendingVerification("Example");
         assertEquals(1, AuthCache.incrementTotpAttempts("example"));
 
-        // The proxy disconnect handlers invoke this cleanup before the next login.
+        // Обработчики отключения обеих proxy-платформ очищают только состояние проверки.
         AuthCache.clearTotpFlowState("ExAmPlE");
 
         assertFalse(AuthCache.isTotpPending("example"));
